@@ -17,9 +17,10 @@ import (
 )
 
 var args struct {
-	File   string `arg:"-f,required" help:"Directory or file of data to convert to image."`
-	Output string `arg:"-o,required" help:"Output file of image data."`
-	Invert bool   `arg:"-i" help:"Flips colours. (0 = White, 1 = Black)"`
+	File        string `arg:"-f,required" help:"Directory or file of data to convert to image."`
+	Output      string `arg:"-o,required" help:"Output file of image data."`
+	Invert      bool   `arg:"-i" help:"Flips colours. \n\t\t\t\t(white represents a 0; black represents a 1)"`
+	Compression int    `arg:"-c" help:"PNG Level of compression. \n\t\t\t\t(0 = Default, 1 = None, 2 = Fastest, 3 = Best)" default:"0"`
 }
 
 func main() {
@@ -30,6 +31,21 @@ func main() {
 	if args.File == "" {
 		fmt.Println("Make sure to supply a file argument ('-f file.txt')")
 		os.Exit(1)
+	}
+
+	var compLevel int
+
+	switch args.Compression {
+	case 0:
+		compLevel = 0
+	case 1:
+		compLevel = -1
+	case 2:
+		compLevel = -2
+	case 3:
+		compLevel = -3
+	default:
+		panic("Unknown compression level, must be in range 0 - 3")
 	}
 
 	fileInfo, err := os.Stat(args.File)
@@ -67,14 +83,14 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		BinaryToPNG(buf.Bytes(), args.Output)
+		BinaryToPNG(buf.Bytes(), args.Output, compLevel)
 	} else {
 		f, err := os.ReadFile(args.File)
 		if err != nil {
 			panic(err)
 		}
 
-		BinaryToPNG(f, args.Output)
+		BinaryToPNG(f, args.Output, compLevel)
 	}
 }
 
@@ -83,14 +99,14 @@ var (
 	px0 byte
 )
 
-func BinaryToPNG(b []byte, output string) {
+func BinaryToPNG(b []byte, output string, compression int) {
 	dimRaw := math.Sqrt(float64(len(b) * 8))
 
 	dimEx := int(math.Round(dimRaw))
 
 	img := image.NewGray(image.Rect(0, 0, dimEx, dimEx))
 
-	fmt.Printf("\tWriting %.0f pixels...\n\n", math.Pow(float64(dimEx), 2))
+	fmt.Printf("\tWriting %.0f pixels...\n", math.Pow(float64(dimEx), 2))
 
 	var x, y int
 
@@ -118,20 +134,25 @@ func BinaryToPNG(b []byte, output string) {
 		}
 	}
 
+	var enc = &png.Encoder{
+		CompressionLevel: png.CompressionLevel(compression),
+	}
+
 	if !strings.HasSuffix(output, ".png") {
-		args.Output += ".png"
+		output += ".png"
 	}
 
 	imgFile, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0700)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	fmt.Print("\r\033[2K\r")
 
+	fmt.Print("\tEncoding...\n")
 	bar := progressbar.DefaultBytes(-1)
 	w := io.MultiWriter(imgFile, bar)
-	err = png.Encode(w, img)
+	err = enc.Encode(w, img)
 	if err != nil {
 		panic(err)
 	}

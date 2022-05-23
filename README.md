@@ -13,3 +13,4 @@ Have lots of fun visualising data! <3
 
 - [ ] Add RGB support (3 bytes per pixel)
 - [ ] 16:9 support
+- [ ] Add goroutines to make writing pixels faster

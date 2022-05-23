@@ -126,8 +126,10 @@ func BinaryToPNG(b []byte, output string) {
 	if err != nil {
 		panic(err)
 	}
+	
+	fmt.Print("\r\033[2K\r")
 
-	bar := progressbar.New(-1)
+	bar := progressbar.DefaultBytes(-1)
 	w := io.MultiWriter(imgFile, bar)
 	err = png.Encode(w, img)
 	if err != nil {

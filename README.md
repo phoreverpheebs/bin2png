@@ -1,5 +1,5 @@
 # bin2png
-<h2>Visualise your data using bin2png, converting bits to black or white pixels</h2>
+<h2>Visualise your data using bin2png, converting bits of data to images</h2>
 
 **Usage: bin2png -f FILE -o OUTPUT [other flags]**
 

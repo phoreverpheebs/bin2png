@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"io"
 	"math"
@@ -16,11 +17,23 @@ import (
 	"github.com/schollz/progressbar"
 )
 
+var formats []string
+var outputs = make(map[string]string)
+
+/**
+ *	CLI Arguments <3
+**/
 var args struct {
-	File        string `arg:"-f,required" help:"Directory or file of data to convert to image."`
-	Output      string `arg:"-o,required" help:"Output file of image data."`
-	Invert      bool   `arg:"-i" help:"Flips colours. \n\t\t\t\t(white represents a 0; black represents a 1)"`
-	Compression int    `arg:"-c" help:"PNG Level of compression. \n\t\t\t\t(0 = Default, 1 = None, 2 = Fastest, 3 = Best)" default:"0"`
+	File   string `arg:"-f" help:"Directory or file of data to convert to image."`
+	Output string `arg:"-o" help:"Output file of image data."`
+
+	PNG  bool `help:"PNG Output."`
+	JPEG bool `help:"JPEG Output."`
+
+	Invert bool `arg:"-i" help:"Flips colours. \n\t\t\t\t(white represents a 0; black represents a 1)"`
+
+	Compression int `arg:"-c" help:"PNG Level of compression. \n\t\t\t\t(0 = Default, 1 = None, 2 = Fastest, 3 = Best)" default:"0" placeholder:"LEVEL"`
+	Quality     int `arg:"-q" help:"JPEG Quality. \n\t\t\t\t(1 - 100; 1 is lowest, 100 is highest)" default:"100" placeholder:"QUALITY"`
 }
 
 func main() {
@@ -33,24 +46,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	var compLevel int
-
-	switch args.Compression {
-	case 0:
-		compLevel = 0
-	case 1:
-		compLevel = -1
-	case 2:
-		compLevel = -2
-	case 3:
-		compLevel = -3
-	default:
-		panic("Unknown compression level, must be in range 0 - 3")
+	if !args.PNG && !args.JPEG {
+		args.PNG = true
 	}
 
-	fileInfo, err := os.Stat(args.File)
-	if err != nil {
-		panic(err)
+	var compLevel int
+
+	_, filename := filepath.Split(args.File)
+	if strings.HasPrefix(filename, ".") {
+		filename = "output-" + filename
 	}
 
 	if args.Invert {
@@ -59,6 +63,49 @@ func main() {
 	} else {
 		px1 = 0xff
 		px0 = 0x00
+	}
+
+	if args.PNG {
+		formats = append(formats, "png")
+
+		switch args.Compression {
+		case 0:
+			compLevel = 0
+		case 1:
+			compLevel = -1
+		case 2:
+			compLevel = -2
+		case 3:
+			compLevel = -3
+		default:
+			panic("Unknown compression level, must be in range 0 - 3")
+		}
+	}
+	if args.JPEG {
+		formats = append(formats, "jpg")
+	}
+
+	if len(formats) > 1 {
+		for _, x := range formats {
+			if args.Output == "" {
+				outputs[x] = filename + "." + x
+			} else {
+				outputs[x] = args.Output + "." + x
+			}
+		}
+	} else {
+		if args.Output != "" && !strings.HasSuffix(args.Output, formats[0]) {
+			outputs[formats[0]] = args.Output + "." + formats[0]
+		} else if args.Output == "" {
+			outputs[formats[0]] = filename + "." + formats[0]
+		} else {
+			outputs[formats[0]] = args.Output
+		}
+	}
+
+	fileInfo, err := os.Stat(args.File)
+	if err != nil {
+		panic(err)
 	}
 
 	var buf bytes.Buffer
@@ -83,14 +130,15 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		BinaryToPNG(buf.Bytes(), args.Output, compLevel)
+
+		BinaryToPNG(buf.Bytes(), outputs, compLevel)
 	} else {
 		f, err := os.ReadFile(args.File)
 		if err != nil {
 			panic(err)
 		}
 
-		BinaryToPNG(f, args.Output, compLevel)
+		BinaryToPNG(f, outputs, compLevel)
 	}
 }
 
@@ -99,7 +147,8 @@ var (
 	px0 byte
 )
 
-func BinaryToPNG(b []byte, output string, compression int) {
+func BinaryToPNG(b []byte, outputTo map[string]string, compression int) {
+
 	dimRaw := math.Sqrt(float64(len(b) * 8))
 
 	dimEx := int(math.Round(dimRaw))
@@ -134,27 +183,34 @@ func BinaryToPNG(b []byte, output string, compression int) {
 		}
 	}
 
-	var enc = &png.Encoder{
-		CompressionLevel: png.CompressionLevel(compression),
-	}
+	for key, obj := range outputTo {
+		fmt.Printf("\r\033[2K\r\tEncoding %s...\n", key)
+		bar := progressbar.DefaultBytes(-1)
 
-	if !strings.HasSuffix(output, ".png") {
-		output += ".png"
-	}
+		imgFile, err := os.OpenFile(obj, os.O_RDWR|os.O_CREATE, 0700)
+		if err != nil {
+			panic(err)
+		}
+		w := io.MultiWriter(imgFile, bar)
 
-	imgFile, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0700)
-	if err != nil {
-		panic(err)
-	}
+		switch key {
+		case "png":
+			enc := &png.Encoder{
+				CompressionLevel: png.CompressionLevel(compression),
+			}
 
-	fmt.Print("\r\033[2K\r")
+			err = enc.Encode(w, img)
+			if err != nil {
+				panic(err)
+			}
+		case "jpg":
+			err = jpeg.Encode(w, img, &jpeg.Options{Quality: args.Quality})
+			if err != nil {
+				panic(err)
+			}
+		}
 
-	fmt.Print("\tEncoding...\n")
-	bar := progressbar.DefaultBytes(-1)
-	w := io.MultiWriter(imgFile, bar)
-	err = enc.Encode(w, img)
-	if err != nil {
-		panic(err)
+		fmt.Print("\r\033[2K\r\tEncoded!\n")
 	}
 }
 

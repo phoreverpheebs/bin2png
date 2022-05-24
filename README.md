@@ -26,6 +26,12 @@
 - `--invert` -> use this flag to invert the black and white pixels. 
     By default a binary bit 1 represents a white pixel and 0 represents a black pixel. This flag will invert those values.
     
+<h2>Example</h2>
+
+Our beloved golang source code visualised:
+
+![bin2pngexample](https://user-images.githubusercontent.com/96285600/170034972-6982816e-72f0-4b23-bec4-84ffe7547dee.png)
+    
 <h2>Thank you for using bin2png <3</h2>
 
 Have lots of fun visualising data! <3

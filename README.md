@@ -1,13 +1,32 @@
 # bin2png
-<h2>Visualise your data using bin2png, converting bits of data to images</h2>
+<h2>Features</h2>
 
-**Usage: bin2png -f FILE -o OUTPUT [other flags]**
+- Visualise any data form as an image
+- Output to PNG and/or JPEG
+  - adjust compression with PNG files and quality for JPEG files
+- Invert pixel values
+- Explore huge image files
+- Explore your data visually
 
-bin2png will read your inputted data (works recursively with directories) and will output a square png with every bit visualised as a black or white pixel.
+<h2>Usage</h2>
 
-By default a bit value of 1 will return a white pixel and a bit value of 0 will return a black pixel. You can invert this by using the `--invert (-i)` flag in the CLI.
+**`bin2png -f FILE [-o OUTPUT] [other flags]`**
 
-Since we are dealing with 8 pixels per byte of the supplied data, the file sizes can get quite large, if you wish to use a different type of compression you can try out the `--compression LEVEL (-c)` flag, 0 will give you zlib's default compression, whilst 1 will not compress at all; 2 will use slightly less compression, but will be faster and 3 will give you the best compression at a slower speed.
+- `-f FILE` (required) -> the file or directory you'd like to read and convert to an image
+- `-o OUTPUT` -> filename of output
+- `-c LEVEL` -> amount of compression for PNG files, default is 0.
+    - for speed use 2
+    - for smallest size use 3
+    - for no compression use 1
+- `-q QUALITY` -> quality of JPEG output, default is 100.
+    - for smallest size and lowest quality use 1
+    - for largest size and highest quality use 100
+- `--jpeg` -> output a JPEG file.
+- `--png` -> output a PNG file.
+- `--invert` -> use this flag to invert the black and white pixels. 
+    By default a binary bit 1 represents a white pixel and 0 represents a black pixel. This flag will invert those values.
+    
+<h2>Thank you for using bin2png <3</h2>
 
 Have lots of fun visualising data! <3
 
@@ -16,3 +35,4 @@ Have lots of fun visualising data! <3
 - [ ] Add RGB support (3 bytes per pixel)
 - [ ] 16:9 support
 - [ ] Add goroutines to make writing pixels faster
+- [ ] Optional recursion depth

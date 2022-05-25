@@ -16,7 +16,7 @@
 - `-o OUTPUT` -> filename of output
 - `-c LEVEL` -> amount of compression for PNG files, default is 0.
     - for speed use 2
-    - for smallest size use 3
+    - for smallest size use 3 (very very slow)
     - for no compression use 1
 - `-q QUALITY` -> quality of JPEG output, default is 100.
     - for smallest size and lowest quality use 1

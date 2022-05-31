@@ -81,6 +81,7 @@ func main() {
 			panic("Unknown compression level, must be in range 0 - 3")
 		}
 	}
+
 	if args.JPEG {
 		formats = append(formats, "jpg")
 	}
@@ -88,7 +89,7 @@ func main() {
 	if len(formats) > 1 {
 		for _, x := range formats {
 			if args.Output == "" {
-				outputs[x] = filename + "." + x
+				outputs[x] = filepath.Clean(filename + "." + x)
 			} else {
 				outputs[x] = args.Output + "." + x
 			}
@@ -97,7 +98,7 @@ func main() {
 		if args.Output != "" && !strings.HasSuffix(args.Output, formats[0]) {
 			outputs[formats[0]] = args.Output + "." + formats[0]
 		} else if args.Output == "" {
-			outputs[formats[0]] = filename + "." + formats[0]
+			outputs[formats[0]] = filepath.Clean(filename + "." + formats[0])
 		} else {
 			outputs[formats[0]] = args.Output
 		}
@@ -108,7 +109,7 @@ func main() {
 		panic(err)
 	}
 
-	var buf bytes.Buffer
+	var buf = new(bytes.Buffer)
 
 	if fileInfo.IsDir() {
 		err := filepath.Walk(args.File, func(path string, info os.FileInfo, err error) error {
@@ -131,14 +132,14 @@ func main() {
 			panic(err)
 		}
 
-		BinaryToPNG(buf.Bytes(), outputs, compLevel)
+		BinaryToPNG(buf, outputs, compLevel)
 	} else {
 		f, err := os.ReadFile(args.File)
 		if err != nil {
 			panic(err)
 		}
 
-		BinaryToPNG(f, outputs, compLevel)
+		BinaryToPNG(bytes.NewBuffer(f), outputs, compLevel)
 	}
 }
 
@@ -147,9 +148,9 @@ var (
 	px0 byte
 )
 
-func BinaryToPNG(b []byte, outputTo map[string]string, compression int) {
+func BinaryToPNG(b *bytes.Buffer, outputTo map[string]string, compression int) {
 
-	dimRaw := math.Sqrt(float64(len(b) * 8))
+	dimRaw := math.Sqrt(float64(b.Len() * 8))
 
 	dimEx := int(math.Round(dimRaw))
 
@@ -159,10 +160,17 @@ func BinaryToPNG(b []byte, outputTo map[string]string, compression int) {
 
 	var x, y int
 
-	pbpng := progressbar.New(len(b) * 8)
+	pbpng := progressbar.New(b.Len() * 8)
 	pbpng.RenderBlank()
-	for i := 0; i < len(b); i++ {
-		bits := fmt.Sprintf("%08b", b[i])
+
+	for {
+		curb, err := b.ReadByte()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			panic(err)
+		}
+		bits := fmt.Sprintf("%08b", curb)
 		for n := 0; n < 8; n++ {
 			pbpng.Add(1)
 			// fmt.Print(fmt.Sprintf("\t\t\t\tx: %d \ty: %d \tbit: %s", x, y, string(bits[n])))
@@ -187,6 +195,10 @@ func BinaryToPNG(b []byte, outputTo map[string]string, compression int) {
 		fmt.Printf("\r\033[2K\r\tEncoding %s...\n", key)
 		bar := progressbar.DefaultBytes(-1)
 
+		if obj == "."+key {
+			obj = "output." + key
+		}
+
 		imgFile, err := os.OpenFile(obj, os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			panic(err)
@@ -210,7 +222,7 @@ func BinaryToPNG(b []byte, outputTo map[string]string, compression int) {
 			}
 		}
 
-		fmt.Print("\r\033[2K\r\tEncoded!\n")
+		fmt.Printf("\r\033[2K\r\tEncoded to %s!\n", obj)
 	}
 }
 

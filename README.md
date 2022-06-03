@@ -3,7 +3,7 @@
 
 - Visualise any data form as an image
 - Output to PNG and/or JPEG
-  - adjust compression with PNG files and quality for JPEG files
+  - Adjust compression with PNG files and quality for JPEG files
 - Invert pixel values
 - Explore huge image files
 - Explore your data visually
@@ -12,8 +12,9 @@
 
 **`bin2png -f FILE [-o OUTPUT] [other flags]`**
 
-- `-f FILE` (required) -> the file or directory you'd like to read and convert to an image
-- `-o OUTPUT` -> filename of output
+- `-f FILE` (required) -> the file or directory you'd like to read and convert to an image.
+- `-o OUTPUT` -> filename of output.
+- `-v` -> verbose output.
 - `-c LEVEL` -> amount of compression for PNG files, default is 0.
     - for speed use 2
     - for smallest size use 3 (very very slow)
@@ -35,6 +36,10 @@ Our beloved golang source code visualised:
 <h2>Thank you for using bin2png <3</h2>
 
 Have lots of fun visualising data! <3
+
+<h2>Credits</h2>
+
+This code uses a partial rewrite of the image/png encoder, so credits go to the Go Authors for writing the package in the first place!
 
 <h2>TODO</h2>
 
